@@ -16,11 +16,20 @@
 
 
 // TODO: insert other definitions and declarations here
+#define S0 4
+#define S1 5
+#define S2 10
+#define S3 11
+#define INPUT 0
+#define PUL_EXT 1
+#define TIME 5
+
 //Pin Registers
 unsigned int volatile *const fio0dir = (unsigned int *) 0x20009C000;
 unsigned int volatile *const fio0pin = (unsigned int *) 0x20009C014;
 unsigned int volatile *const fio0set = (unsigned int *) 0x20009C018;
 unsigned int volatile *const fio0clr = (unsigned int *) 0x20009C01C;
+
 //Timer Registers
 unsigned int volatile *const t0ir = (unsigned int *) 0x40004000;
 unsigned int volatile *const t0tcr = (unsigned int *) 0x40004004; //Habilitar Timer
@@ -28,6 +37,7 @@ unsigned int volatile *const t0pr = (unsigned int *) 0x4000400C;
 unsigned int volatile *const t0mcr = (unsigned int *) 0x40004014;
 unsigned int volatile *const t0mr0 = (unsigned int *) 0x40004018;
 unsigned int volatile *const t0ctcr = (unsigned int *) 0x40004000; //Seleccionar modo(TMR o Counter)
+unsigned int volatile *const t0ccr = (unsigned int *) 0x40004028;
 //Timer1
 unsigned int volatile *const t1ir = (unsigned int *) 0x40008000;
 unsigned int volatile *const t1tcr = (unsigned int *) 0x40008004; //Habilitar Timer
@@ -35,6 +45,7 @@ unsigned int volatile *const t1pr = (unsigned int *) 0x4000800C;
 unsigned int volatile *const t1mcr = (unsigned int *) 0x40008014;
 unsigned int volatile *const t1mr0 = (unsigned int *) 0x40008018;
 unsigned int volatile *const t1ctcr = (unsigned int *) 0x40008070; //Seleccionar modo(TMR o Counter)
+unsigned int volatile *const pinsel3 = (unsigned int *) 0x4002C00C;
 //Interrupt Registers
 unsigned int volatile *const iser0 = (unsigned int *) 0xE000E100;
 unsigned int volatile *const icer0 = (unsigned int *) 0xE000E180;
@@ -72,9 +83,14 @@ int main(void) {
 
 void config_timer0(){ //Cada 1seg interrumpe para mandar dato
 	*t0ctcr = 0; //Timer 0 como timer y no contador(ya viene asi por defecto)
-	*t0mr0 = 25000000; //Interrumpir cada 1 segundo
+	//Match
+	*t0mr0 = 25000000 *TIME; //Interrumpir cada TIME segundo
 	*t0pr = 0;  //Preescaler register en 0
 	*t0mcr |= (1<<1) | (1<<0);  //Configuramos para que interrumpa al llegar al match y resetee el TC
+	//Captura
+	*t0ccr |= (1<<0); //Captura en rising edge del pin 1.26
+	*pinsel3 |= (1<<20) | (1<<21);
+	//Interrupciones
 	*iser0 |= (1<<1); //Habilito interrupciones por TMR0
 	*t0tcr |= (1<<0); //Empiezo a contar
 	return;
@@ -93,6 +109,34 @@ void config_puerto_serie(){
 	return;
 }
 
+
+void config_pines(){
+	*fio0dir |= (1<<S0) | (1<<S1) | (1<<S2) | (1<<S3); //Pines de config del sensor como salida
+	*fio0dir &= ~(1<<INPUT); //La salida del sensor como entrada a la placa
+	*fio0dir &= ~(1<<PUL_EXT); //Pin 0.PUL_EXT como entrada para el pulsador
+	*io0intenr |= (1<<PUL_EXT); //Habilito interrupciones por flanco de subida
+	*iser0 |= (1<<21); //Habilito interrupciones externas
+	return;
+}
+
+void leer_rojo(){
+	*fio0clr |= (1<<S2) | (1<<S3);
+	return;
+}
+
+void leer_verde(){
+	*fio0set |= (1<<S2) | (1<<S3);
+	return;
+}
+
+void leer_azul(){
+	*fio0clr |= (1<<S2);
+	*fio0set |= (1<<S3);
+	return;
+}
+
+//Rutinas de interrupcion
+
 void TIMER0_IRQHandler(){
 	*t0ir |= (1); //Bajo bandera
 	while((*u0lsr & (1<<5))==0){ //Espero a que el buffer este vacio
@@ -103,6 +147,8 @@ void TIMER0_IRQHandler(){
 	return;
 }
 
-void config_pines(){
+void EINT3_IRQHandler(){
+	*io0intclr |= (1<<PUL_EXT); //Bajo la bandera
 	return;
 }
+
