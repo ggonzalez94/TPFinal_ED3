@@ -14,6 +14,6 @@ void loop() {
          if(mySerial.available()) {
            int dato = mySerial.read();
            dato = dato;
-		   Serial.println(dato);
+           Serial.println(dato);
         }     
 }

@@ -43,7 +43,7 @@ unsigned int volatile *const io0intenr = (unsigned int *)0x40028090;
 unsigned int volatile *const io0intclr = (unsigned int *)0x4002808C;
 
 //Puerto Serie Registers
-unsigned int volatile *const pconp = (unsigned int *) 0x400FC0C0;
+unsigned int volatile *const pconp = (unsigned int *) 0x400FC0C4;
 unsigned int volatile *const u0dll = (unsigned int *) 0x4000C000;
 unsigned int volatile *const u0dlm = (unsigned int *) 0x4000C004;
 unsigned int volatile *const u0lcr = (unsigned int *) 0x4000C00C;
@@ -52,7 +52,7 @@ unsigned int volatile *const u0thr = (unsigned int *) 0x4000C000;
 unsigned int volatile *const pinsel0 = (unsigned int *) 0x4002C000;
 
 //otros punteros y variables globales
-uint8_t volatile transmitir = 0;
+int volatile transmitir = 0;
 
 void config_pines();
 void config_timer0();
@@ -61,8 +61,8 @@ void config_puerto_serie();
 int main(void) {
 
 	config_pines();
-	config_timer0();
 	config_puerto_serie();
+	config_timer0();
 
     while(1) {
 
@@ -76,27 +76,29 @@ void config_timer0(){ //Cada 1seg interrumpe para mandar dato
 	*t0pr = 0;  //Preescaler register en 0
 	*t0mcr |= (1<<1) | (1<<0);  //Configuramos para que interrumpa al llegar al match y resetee el TC
 	*iser0 |= (1<<1); //Habilito interrupciones por TMR0
+	*t0tcr |= (1<<0); //Empiezo a contar
 	return;
 }
 
 void config_puerto_serie(){
 	*pconp |= (1<<3); //Prendo UART
+	*u0lcr |= (1<<0) | (1<<1); //8 bits
 	//Dejo pclock para el UART en 25MHZ
 	*u0lcr |= (1<<7); //Habilito acceso a los bits del divisor
 	*u0dll = 163; //Baud_rate = 9585
 	*u0dlm = 0;
 	*u0lcr &= ~(1<<7); //Deshabilito acceso a bits divisor
 	*pinsel0 |= (1<<4); //Confiuro pin 0.2
-	*u0lsr |= (1<<0) | (1<<1); //8 bits
-	*u0lsr &= ~(1<<2 | 1<<3); //1 bit de stop y sin pariedad
+	*u0lcr &= ~(1<<2 | 1<<3); //1 bit de stop y sin paridad
 	return;
 }
 
 void TIMER0_IRQHandler(){
-	while(!(*u0lsr & (1<<5))){ //Espero a que el buffer este vacio
+	*t0ir |= (1); //Bajo bandera
+	while((*u0lsr & (1<<5))==0){ //Espero a que el buffer este vacio
 
 	}
-	*u0thr = transmitir; //Cargo el dato a transmitir
+	*u0thr = (transmitir & 0xFF); //Cargo el dato a transmitir
 	transmitir++;
 	return;
 }
