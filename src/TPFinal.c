@@ -25,10 +25,10 @@
 #define TIME 1
 
 //Pin Registers
-unsigned int volatile *const fio0dir = (unsigned int *) 0x20009C000;
-unsigned int volatile *const fio0pin = (unsigned int *) 0x20009C014;
-unsigned int volatile *const fio0set = (unsigned int *) 0x20009C018;
-unsigned int volatile *const fio0clr = (unsigned int *) 0x20009C01C;
+unsigned int volatile *const fio0dir = (unsigned int *) 0x2009C000;
+unsigned int volatile *const fio0pin = (unsigned int *) 0x2009C014;
+unsigned int volatile *const fio0set = (unsigned int *) 0x2009C018;
+unsigned int volatile *const fio0clr = (unsigned int *) 0x2009C01C;
 
 //Timer Registers
 unsigned int volatile *const t0ir = (unsigned int *) 0x40004000;
@@ -102,6 +102,8 @@ void config_timer0(){
 	*t0mcr |= (1<<1);  //Configuramos para que resetee el TC
 	//Captura
 	*t0ccr |= (1<<0); //Captura en rising edge del pin 1.26
+	*t0ccr &= ~(1<<2); //desactivo las interrupciones de captura
+	*t0mcr &= ~(1<<0); //desactiva interrupciones por Match
 	*pinsel3 |= (1<<20) | (1<<21);
 	//Interrupciones
 	*iser0 |= (1<<1); //Habilito interrupciones por TMR0
@@ -125,7 +127,6 @@ void config_puerto_serie(){
 
 void config_pines(){
 	*fio0dir |= (1<<S0) | (1<<S1) | (1<<S2) | (1<<S3); //Pines de config del sensor como salida
-	*fio0dir &= ~(1<<INPUT); //La salida del sensor como entrada a la placa
 	*fio0dir &= ~(1<<PUL_EXT); //Pin 0.PUL_EXT como entrada para el pulsador
 	*io0intenr |= (1<<PUL_EXT); //Habilito interrupciones por flanco de subida
 	*iser0 |= (1<<21); //Habilito interrupciones externas
@@ -167,9 +168,9 @@ void TIMER0_IRQHandler(){
 				break;
 		}
 
-		if (suma_captura == 0){ //Si todavia no lei nada salgo
-			return;
-		}
+//		if (suma_captura == 0){ //Si todavia no lei nada salgo
+//			return;
+//		}
 		//Calculo los valores:
 		float tiempo_promedio = (suma_captura / 25000000) / vuelta_captura;
 		frecuencia_promedio = 1/tiempo_promedio;
@@ -200,13 +201,6 @@ void TIMER0_IRQHandler(){
 		vuelta_captura++;
 	}
 
-
-
-//	while((*u0lsr & (1<<5))==0){ //Espero a que el buffer este vacio
-//
-//	}
-//	*u0thr = (transmitir & 0xFF); //Cargo el dato a transmitir
-//	transmitir++;
 	return;
 }
 
@@ -214,7 +208,7 @@ void EINT3_IRQHandler(){
 	*io0intclr |= (1<<PUL_EXT); //Bajo la bandera
 	*t0tcr = (1<<1); //Reseteo y deshabilito el timer
 	*t0mcr ^= (1<<0); //Toggle a la interrupcion por match
-	*t0ccr ^= (1<<0); //Toggle a la interrupcion por captura
+	*t0ccr ^= (1<<2); //Toggle a la interrupcion por captura
 	*t0tcr = (1<<0); //Habilito nuevamente el Timer
 	return;
 }
