@@ -85,8 +85,8 @@ int main(void) {
 	config_pines();
 	//Frec 100%
 //	*fio0set |= (1<<S0) | (1<<S1);
+	*fio0clr |= (1<<S1);
 	*fio0set |= (1<<S0);
-	*fio0set &= ~(1<<S1);
 	config_puerto_serie();
 	config_timer0();
 
@@ -164,8 +164,8 @@ void TIMER0_IRQHandler(){
 			}
 			else{
 				tiempo2 = *cr0;
-//				suma_captura = suma_captura + (tiempo2 - tiempo1);
-				suma_captura = suma_captura + (tiempo2 - tiempo1)/25;
+//				suma_captura = suma_captura + (tiempo2 - tiempo1)/25;
+				suma_captura = (tiempo2 - tiempo1)/100;
 				tiempo1 = tiempo2;
 			}
 			vuelta_captura++;
@@ -177,12 +177,15 @@ void TIMER0_IRQHandler(){
 		switch(color_leyendo){
 			case 0:
 				leer_rojo();
+				bandera_color = 2;
 				break;
 			case 1:
 				leer_verde();
+				bandera_color = 0;
 				break;
 			case 2:
 				leer_azul();
+				bandera_color = 1;
 				break;
 		}
 
@@ -190,13 +193,12 @@ void TIMER0_IRQHandler(){
 //			return;
 //		}
 		//Calculo los valores:
-		suma_captura = suma_captura / vuelta_captura;
+//		suma_captura = suma_captura / vuelta_captura;
 		//Envio la frecuencia
-		while((*u0lsr & (1<<5))==0){ //Espero a que el buffer este vacio
+		while((*u0lsr & (1<<5))==0){} //Espero a que el buffer este vacio
+		*u0thr = (bandera_color & 0xFF);
 
-		}
-//		*u0thr = (frecuencia_promedio & 0xFF); //Cargo el dato a transmitir
-
+		while((*u0lsr & (1<<5))==0){} //Espero a que el buffer este vacio
 		*u0thr = ((suma_captura) & 0xFF);
 
 		//Reinicio las variables

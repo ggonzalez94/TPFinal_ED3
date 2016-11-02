@@ -10,9 +10,9 @@ void setup() {
         {;}
         
         mySerial.begin(9600);
-        letra[0] = 'r';
-        letra[1] = 'g';
-        letra[2] = 'b';
+        letra[0] = 'R';
+        letra[1] = 'G';
+        letra[2] = 'B';
         i=0;
 }
 
@@ -20,12 +20,22 @@ void loop() {
   if(mySerial.available()) {
            int dato = mySerial.read();
            dato = dato;
-           Serial.print(letra[i]);
-           Serial.print("=");
-           Serial.print(dato);
-           Serial.print(" ");
-           if(i==2)
-              Serial.println("");
-           i = (i+1)%3; 
+
+           if(dato<3){
+            Serial.print(letra[dato]);
+            Serial.print("=");
+            i++;
+           }
+
+           else if(dato>=3){
+            Serial.print(dato);
+            Serial.print(" ");
+            i++;
+           }
+
+           if(i == 6){
+            i=0;
+            Serial.println("");
+           }
   }
 }
