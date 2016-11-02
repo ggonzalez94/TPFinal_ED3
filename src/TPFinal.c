@@ -185,9 +185,6 @@ void TIMER0_IRQHandler(){
 				break;
 		}
 
-//		if (suma_captura == 0){ //Si todavia no lei nada salgo
-//			return;
-//		}
 		//Calculo los valores:
 		float tiempo_promedio = (suma_captura / 25000000) / vuelta_captura;
 		frecuencia_promedio = 1/tiempo_promedio;
@@ -205,9 +202,6 @@ void TIMER0_IRQHandler(){
 
 		return;
 	}
-
-
-
 	return;
 }
 
