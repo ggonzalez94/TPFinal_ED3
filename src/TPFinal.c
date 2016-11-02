@@ -165,7 +165,7 @@ void TIMER0_IRQHandler(){
 			else{
 				tiempo2 = *cr0;
 //				suma_captura = suma_captura + (tiempo2 - tiempo1);
-				suma_captura = (tiempo2 - tiempo1);
+				suma_captura = suma_captura + (tiempo2 - tiempo1)/25;
 				tiempo1 = tiempo2;
 			}
 			vuelta_captura++;
@@ -173,6 +173,7 @@ void TIMER0_IRQHandler(){
 
 	if (*t0ir & (1<<0)){ //Interrupcion por Match
 		*t0ir |= (1<<0); //Bajo la bandera
+		int bandera_color;
 		switch(color_leyendo){
 			case 0:
 				leer_rojo();
@@ -185,23 +186,29 @@ void TIMER0_IRQHandler(){
 				break;
 		}
 
+//		if (suma_captura == 0){ //Si todavia no lei nada salgo
+//			return;
+//		}
 		//Calculo los valores:
-		float tiempo_promedio = (suma_captura / 25000000) / vuelta_captura;
-		frecuencia_promedio = 1/tiempo_promedio;
+		suma_captura = suma_captura / vuelta_captura;
 		//Envio la frecuencia
 		while((*u0lsr & (1<<5))==0){ //Espero a que el buffer este vacio
 
 		}
 //		*u0thr = (frecuencia_promedio & 0xFF); //Cargo el dato a transmitir
-		*u0thr = ((suma_captura/25) & 0xFF);
+
+		*u0thr = ((suma_captura) & 0xFF);
 
 		//Reinicio las variables
-//		vuelta_captura = 0;
-//		suma_captura = 0;
+		vuelta_captura = 0;
+		suma_captura = 0;
 		color_leyendo = (color_leyendo+1)%3; //Reinicio la lectura
 
 		return;
 	}
+
+
+
 	return;
 }
 
