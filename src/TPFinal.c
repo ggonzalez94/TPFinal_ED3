@@ -23,6 +23,7 @@
 #define INPUT 0
 #define PUL_EXT 1
 #define TIME 1
+#define CANTIDAD_COLORES 8
 
 //Pin Registers
 unsigned int volatile *const fio0dir = (unsigned int *) 0x2009C000;
@@ -70,6 +71,8 @@ int volatile color_leyendo = 0; //Para saber que color debo leer
 
 int rgb_values[3] = {0,0,0}; // Valores en escala RGB
 int led_values[3] = {0,0,0}; //Valores para pasarle a los Match del PWM
+int color_values[3][CANTIDAD_COLORES];
+char colores[CANTIDAD_COLORES];
 int volatile vuelta_captura = 0; //para saber cuantas veces hice captura
 int volatile tiempo1;
 int volatile tiempo2; //variables para guardar valores del captura
@@ -90,6 +93,7 @@ void leer_azul();
 void rgb_to_led(int rojo, int verde, int azul);
 void actualizar_PWM();
 void enviar(char colorDetectado);
+char classify();
 
 int main(void) {
 
@@ -230,6 +234,25 @@ void enviar(char colorDetectado){
 		while((*u0lsr & (1<<5))==0){} //Espero a que el buffer este vacio
 		*u0thr = (flagFin);
 		//actualizar_PWM();
+}
+
+char classify(){
+	int i_color;
+	int ClosestColor = 0;
+	float MaxDiff;
+	float MinDiff = 1000.0;
+	for (i_color = 0; i_color < 6; i_color ++) {
+	  // compute Euclidean distances
+	  float ED = sqrt(pow((colores[0][i_color] - rgb_value[0]),2.0) +
+	  pow((colores[1][i_color] - rgb_values[1]),2.0) + pow((colores[2][i_color] - rgb_values[2]),2.0));
+	  MaxDiff = ED;
+	  // find minimum distance
+	  if (MaxDiff < MinDiff) {
+		MinDiff = MaxDiff;
+		ClosestColor = i_color;
+	  }
+	}
+	return colores[ClosestColor];
 }
 
 //Rutinas de interrupcion
