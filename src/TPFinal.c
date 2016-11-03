@@ -68,6 +68,8 @@ int volatile transmitir = 0;
 int volatile color_leyendo = 0; //Para saber que color debo leer
 //0=rojo;1=verde;2=azul
 
+int rgb_values[3] = {0,0,0}; // Valores en escala RGB
+int led_values[3] = {0,0,0}; //Valores para pasarle a los Match del PWM
 int volatile vuelta_captura = 0; //para saber cuantas veces hice captura
 int volatile tiempo1;
 int volatile tiempo2; //variables para guardar valores del captura
@@ -79,6 +81,12 @@ int volatile frecuencia_promedio = 0;
 void config_pines();
 void config_timer0();
 void config_puerto_serie();
+void config_PWM();
+void leer_rojo();
+void leer_verde();
+void leer_azul();
+void rgb_to_led(int rojo, int verde, int azul);
+void actualizar_PWM();
 
 int main(void) {
 
@@ -89,6 +97,7 @@ int main(void) {
 	*fio0set |= (1<<S0);
 	config_puerto_serie();
 	config_timer0();
+	//config_PWM();
 
     while(1) {
 
@@ -135,6 +144,21 @@ void config_pines(){
 	return;
 }
 
+void config_PWM(){
+	*pconp |= (1<<6); //Habilito el modulo PWM
+	//Pines 1.18,20,21
+	*pinsel3 |= (1<<5);
+	*pinsel3 |= (1<<9);
+	*pinsel3 |= (1<<11);
+	*pwm1mr0 |= 25000000/500; //Periodo del pulso(igual supuestamente al de Arduino https://learn.adafruit.com/adafruit-arduino-lesson-3-rgb-leds/theory-pwm)
+	*pwm1mcr |= (1<<1); //Reseteo en Match0
+	*pwm1ler |= (1<<0); //Hago efectivo el valor del Match
+	*pwm1tcr |= (1<<3); //Configuro el modulo como PWM
+	//Habilito las salidas 1,2 y 3
+	*pwm1pcr |= (1<<9) | (1<<10) | (1<<11);
+	return;
+}
+
 void leer_rojo(){
 	*fio0clr |= (1<<S2) | (1<<S3);
 	return;
@@ -148,6 +172,30 @@ void leer_verde(){
 void leer_azul(){
 	*fio0clr |= (1<<S2);
 	*fio0set |= (1<<S3);
+	return;
+}
+
+void actualizar_PWM(){
+	rgb_to_led(rojo,verde,azul); //Actualizo los valores del array led_values
+	//Cambio el duty cicle actualizando los match
+	*pwm1mr1 = led_values[0];
+	*pwm1mr2 = led_values[1];
+	*pwm1mr3 = led_values[2];
+	//Hago que el cambio sea efectivo
+	*pwm1ler |= (1<<1) | (1<<2) | (1<<3);
+	return;
+}
+
+void rgb_to_led(int rojo, int verde, int azul){
+	int rojo_led;
+	int verde_led;
+	int azul_led;
+	//Interpolacion
+	///Falta hacer
+
+	led_values[0] = rojo_led;
+	led_values[1] = verde_led;
+	led_values[2] = azul_led;
 	return;
 }
 
@@ -200,6 +248,8 @@ void TIMER0_IRQHandler(){
 
 		while((*u0lsr & (1<<5))==0){} //Espero a que el buffer este vacio
 		*u0thr = ((suma_captura) & 0xFF);
+
+		//actualizar_PWM();
 
 		//Reinicio las variables
 		vuelta_captura = 0;
