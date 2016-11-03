@@ -21,53 +21,37 @@ void loop() {
   if(mySerial.available()) {
            int dato = mySerial.read();
            dato = dato;
-           
-           if(dato == 255){
-                recibiendo = true;
-           }
 
-           if(recibiendo){
+           if(true){
                 switch(i){
                       case 0:
                           Serial.print("R=");
                           Serial.print(dato);
                           Serial.print(" ");
-                          i++;
                           break;
                       case 1:
                           Serial.print("G=");
                           Serial.print(dato);
                           Serial.print(" ");
-                          i++;
                           break;
                       case 2:
                           Serial.print("B=");
                           Serial.print(dato);
-                          Serial.print(" ");
-                          i=0;
+                          Serial.println(" ");
                           break;
-                }
-           }
 
-           if(dato == 0){
-            recibiendo = false;
+                }
+                i = (i+1)%3;
+                
            }
+           
+//           if(dato == 255){
+//                recibiendo = true;
+//           }
+//
+//           if(dato == 0){
+//            recibiendo = false;
+//           }
              
-//           if(dato<3){
-//            Serial.print(letra[dato]);
-//            Serial.print("=");
-//            i++;
-//           }
-//
-//           else if(dato>=3){
-//            Serial.print(dato);
-//            Serial.print(" ");
-//            i++;
-//           }
-//
-//           if(i == 6){
-//            i=0;
-//            Serial.println("");
-//           }
   }
 }

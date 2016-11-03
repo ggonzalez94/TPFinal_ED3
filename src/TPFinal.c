@@ -23,7 +23,7 @@
 #define S3 11
 #define INPUT 0
 #define PUL_EXT 1
-#define TIME 1
+#define TIME 0.3
 #define CANTIDAD_COLORES 8
 
 //Pin Registers
@@ -38,17 +38,11 @@ unsigned int volatile *const t0tcr = (unsigned int *) 0x40004004; //Habilitar Ti
 unsigned int volatile *const t0pr = (unsigned int *) 0x4000400C;
 unsigned int volatile *const t0mcr = (unsigned int *) 0x40004014;
 unsigned int volatile *const t0mr0 = (unsigned int *) 0x40004018;
-unsigned int volatile *const t0ctcr = (unsigned int *) 0x40004000; //Seleccionar modo(TMR o Counter)
+unsigned int volatile *const t0ctcr = (unsigned int *) 0x40004070; //Seleccionar modo(TMR o Counter)
 unsigned int volatile *const t0ccr = (unsigned int *) 0x40004028;
-unsigned int volatile *const cr0 = (unsigned int *) 0x4000402C;
-//Timer1
-unsigned int volatile *const t1ir = (unsigned int *) 0x40008000;
-unsigned int volatile *const t1tcr = (unsigned int *) 0x40008004; //Habilitar Timer
-unsigned int volatile *const t1pr = (unsigned int *) 0x4000800C;
-unsigned int volatile *const t1mcr = (unsigned int *) 0x40008014;
-unsigned int volatile *const t1mr0 = (unsigned int *) 0x40008018;
-unsigned int volatile *const t1ctcr = (unsigned int *) 0x40008070; //Seleccionar modo(TMR o Counter)
+unsigned int volatile *const t0cr0 = (unsigned int *) 0x4000402C;
 unsigned int volatile *const pinsel3 = (unsigned int *) 0x4002C00C;
+
 //Interrupt Registers
 unsigned int volatile *const iser0 = (unsigned int *) 0xE000E100;
 unsigned int volatile *const icer0 = (unsigned int *) 0xE000E180;
@@ -80,7 +74,7 @@ int volatile transmitir = 0;
 int volatile color_leyendo = 0; //Para saber que color debo leer
 //0=rojo;1=verde;2=azul
 
-int rgb_values[3] = {0,0,0}; // Valores en escala RGB
+int rgb_values[3] = {11,22,33}; // Valores en escala RGB
 int led_values[3] = {0,0,0}; //Valores para pasarle a los Match del PWM
 int color_values[3][CANTIDAD_COLORES]; //Arreglo con los valores RGB para cada color
 char color_names[CANTIDAD_COLORES]; //Arreglo con el nombre de cada color
@@ -228,22 +222,24 @@ void rgb_to_led(int rojo, int verde, int azul){
 }
 
 void enviar(char colorDetectado){
+		int rojo = rgb_values[0]+1;
+		int verde = rgb_values[1]+1;
+		int azul = rgb_values[2]+1;
+//		while((*u0lsr & (1<<5))==0){} //Espero a que el buffer este vacio
+//		*u0thr = (flag);
 
 		while((*u0lsr & (1<<5))==0){} //Espero a que el buffer este vacio
-		*u0thr = (flag);
-
+		*u0thr = (rojo & 0xFF);
 		while((*u0lsr & (1<<5))==0){} //Espero a que el buffer este vacio
-		*u0thr = (rgb_values[0] && 0xFF);
+		*u0thr = (verde & 0xFF);
 		while((*u0lsr & (1<<5))==0){} //Espero a que el buffer este vacio
-		*u0thr = (rgb_values[1] && 0xFF);
-		while((*u0lsr & (1<<5))==0){} //Espero a que el buffer este vacio
-		*u0thr = (rgb_values[2] && 0xFF);
+		*u0thr = (azul & 0xFF);
 //		envio la letra correspondiente al color identificado
-		while((*u0lsr & (1<<5))==0){} //Espero a que el buffer este vacio
-		*u0thr = (colorDetectado && 0xFF);
+//		while((*u0lsr & (1<<5))==0){} //Espero a que el buffer este vacio
+//		*u0thr = (colorDetectado && 0xFF);
 
-		while((*u0lsr & (1<<5))==0){} //Espero a que el buffer este vacio
-		*u0thr = (flagFin);
+//		while((*u0lsr & (1<<5))==0){} //Espero a que el buffer este vacio
+//		*u0thr = (flagFin);
 		//actualizar_PWM();
 }
 
@@ -273,18 +269,18 @@ void TIMER0_IRQHandler(){
 	//Cada TIME segundos cambio de color a leer y mando por puerto serie el resultado
 
 	if(*t0ir & (1<<4)){ //Interrupcion por captura
-			*t0ir |= (1<<4); //Bajo la bandera
-			if(vuelta_captura==0){
-				tiempo1 = *cr0;
-			}
-			else{
-				tiempo2 = *cr0;
-				suma_captura = (tiempo2 - tiempo1)/100;
-				tiempo1 = tiempo2;
-			}
-			vuelta_captura++;
-			return;
+		*t0ir |= (1<<4); //Bajo la bandera
+		if(vuelta_captura==0){
+			tiempo1 = *t0cr0;
 		}
+		else{
+			tiempo2 = *t0cr0;
+			suma_captura = (tiempo2 - tiempo1)/100;
+			tiempo1 = tiempo2;
+		}
+		vuelta_captura++;
+		return;
+	}
 
 	if (*t0ir & (1<<0)){ //Interrupcion por Match
 		*t0ir |= (1<<0); //Bajo la bandera
@@ -293,24 +289,14 @@ void TIMER0_IRQHandler(){
 			case 0:
 				leer_rojo();
 				rgb_values[2] = suma_captura;
-				if(primeraVez){
-					rgb_values[2] = 0;
-				}
 				break;
 			case 1:
 				leer_verde();
 				rgb_values[0] = suma_captura;
-				if(primeraVez){
-					rgb_values[0] = 0;
-				}
 				break;
 			case 2:
 				leer_azul();
 				rgb_values[1] = suma_captura;
-				if(primeraVez){
-					rgb_values[1] = 0;
-
-				}
 				break;
 		}
 
@@ -318,19 +304,20 @@ void TIMER0_IRQHandler(){
 		char colorDetectado = classify();
 		if (color_leyendo == 0 && !primeraVez){		//envio solo cuando tengo los 3 valores listos
 			enviar(colorDetectado);
-			actualizar_PWM();
+			//actualizar_PWM();
 		}
 
-			//Reinicio las variables
-			vuelta_captura = 0;
-			suma_captura = 0;
-			color_leyendo = (color_leyendo+1)%3; //Reinicio la lectura
-			if(primeraVez && (color_leyendo == 0)){		//aca entro la primera vez que tengo los 3 colores listos para enviar
-				primeraVez = 0;
-			}
+		//Reinicio las variables
+		vuelta_captura = 0;
+		suma_captura = 0;
+		color_leyendo = (color_leyendo+1)%3; //Reinicio la lectura
+		if(primeraVez && (color_leyendo == 0)){		//aca entro la primera vez que tengo los 3 colores listos para enviar
+			primeraVez = 0;
+		}
 
 		return;
 	}
+	return;
 }
 
 void EINT3_IRQHandler(){
