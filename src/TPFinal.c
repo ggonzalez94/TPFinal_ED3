@@ -24,7 +24,15 @@
 #define INPUT 0
 #define PUL_EXT 1
 #define TIME 0.3
-#define CANTIDAD_COLORES 8
+#define CANTIDAD_COLORES 9
+
+//Constantes de calibracion
+#define R_MAX 71
+#define R_MIN 169
+#define G_MAX 60
+#define G_MIN 177
+#define B_MAX 40
+#define B_MIN 137
 
 //Pin Registers
 unsigned int volatile *const fio0dir = (unsigned int *) 0x2009C000;
@@ -99,6 +107,7 @@ void rgb_to_led(int rojo, int verde, int azul);
 void actualizar_PWM();
 void enviar(char colorDetectado);
 char classify();
+int map(int x,int in_min,int in_max, int out_min, int out_max);
 
 int main(void) {
 
@@ -130,6 +139,8 @@ void config_timer0(){
 	*pinsel3 |= (1<<20) | (1<<21);
 
 	//Interrupciones
+	*t0mcr |= (1<<0); //Toggle a la interrupcion por match
+	*t0ccr |= (1<<2); //Toggle a la interrupcion por captura
 	*iser0 |= (1<<1); //Habilito interrupciones por TMR0
 	*t0tcr |= (1<<0); //Empiezo a contar
 
@@ -262,6 +273,19 @@ char classify(){
 	return color_names[ClosestColor];
 }
 
+int map(int x,int in_min,int in_max, int out_min, int out_max){
+	if (x<=in_max){
+		x = out_max;
+	}
+	else if(x>=in_min){
+		x = out_min;
+	}
+	else{
+		x = (x-in_min)*(out_max-out_min)/(in_max - in_min) + out_min;
+	}
+	return x;
+}
+
 //Rutinas de interrupcion
 
 void TIMER0_IRQHandler(){
@@ -288,15 +312,15 @@ void TIMER0_IRQHandler(){
 		switch(color_leyendo){
 			case 0:
 				leer_rojo();
-				rgb_values[2] = suma_captura;
+				rgb_values[2] = map(suma_captura,B_MIN,B_MAX,0,255);
 				break;
 			case 1:
 				leer_verde();
-				rgb_values[0] = suma_captura;
+				rgb_values[0] = map(suma_captura,R_MIN,R_MAX,0,255);
 				break;
 			case 2:
 				leer_azul();
-				rgb_values[1] = suma_captura;
+				rgb_values[1] = map(suma_captura,G_MIN,G_MAX,0,255);
 				break;
 		}
 
@@ -321,11 +345,11 @@ void TIMER0_IRQHandler(){
 }
 
 void EINT3_IRQHandler(){
-	*io0intclr |= (1<<PUL_EXT); //Bajo la bandera
-	*t0tcr = (1<<1); //Reseteo y deshabilito el timer
-	*t0mcr ^= (1<<0); //Toggle a la interrupcion por match
-	*t0ccr ^= (1<<2); //Toggle a la interrupcion por captura
-	*t0tcr = (1<<0); //Habilito nuevamente el Timer
+//	*io0intclr |= (1<<PUL_EXT); //Bajo la bandera
+//	*t0tcr = (1<<1); //Reseteo y deshabilito el timer
+//	*t0mcr ^= (1<<0); //Toggle a la interrupcion por match
+//	*t0ccr ^= (1<<2); //Toggle a la interrupcion por captura
+//	*t0tcr = (1<<0); //Habilito nuevamente el Timer
 	return;
 }
 
