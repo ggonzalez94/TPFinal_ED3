@@ -10,6 +10,7 @@
 
 #ifdef __USE_CMSIS
 #include "LPC17xx.h"
+#include "math.h"
 #endif
 
 #include <cr_section_macros.h>
@@ -64,6 +65,16 @@ unsigned int volatile *const u0lsr = (unsigned int *) 0x4000C014;
 unsigned int volatile *const u0thr = (unsigned int *) 0x4000C000;
 unsigned int volatile *const pinsel0 = (unsigned int *) 0x4002C000;
 
+//PWM Registers
+unsigned int volatile *const pwm1tcr = (unsigned int *) 0x40018004;
+unsigned int volatile *const pwm1mcr = (unsigned int *) 0x40018014;
+unsigned int volatile *const pwm1mr0 = (unsigned int *) 0x40018018;
+unsigned int volatile *const pwm1mr1 = (unsigned int *) 0x4001801C;
+unsigned int volatile *const pwm1mr2 = (unsigned int *) 0x40018020;
+unsigned int volatile *const pwm1mr3 = (unsigned int *) 0x40018024;
+unsigned int volatile *const pwm1pcr = (unsigned int *) 0x4001804C;
+unsigned int volatile *const pwm1ler = (unsigned int *) 0x40018050;
+
 //otros punteros y variables globales
 int volatile transmitir = 0;
 int volatile color_leyendo = 0; //Para saber que color debo leer
@@ -71,14 +82,14 @@ int volatile color_leyendo = 0; //Para saber que color debo leer
 
 int rgb_values[3] = {0,0,0}; // Valores en escala RGB
 int led_values[3] = {0,0,0}; //Valores para pasarle a los Match del PWM
-int color_values[3][CANTIDAD_COLORES];
-char colores[CANTIDAD_COLORES];
+int color_values[3][CANTIDAD_COLORES]; //Arreglo con los valores RGB para cada color
+char color_names[CANTIDAD_COLORES]; //Arreglo con el nombre de cada color
 int volatile vuelta_captura = 0; //para saber cuantas veces hice captura
 int volatile tiempo1;
 int volatile tiempo2; //variables para guardar valores del captura
 int volatile suma_captura = 0;
 int volatile frecuencia_promedio = 0;
-int flag = 255; //flag de inicio y fin de transmision
+int flag = 255; //flag de inicio  de transmision
 int flagFin = 0;
 int primeraVez = 1;
 
@@ -191,7 +202,7 @@ void leer_azul(){
 }
 
 void actualizar_PWM(){
-	rgb_to_led(rojo,verde,azul); //Actualizo los valores del array led_values
+	rgb_to_led(rgb_values[0],rgb_values[1],rgb_values[2]); //Actualizo los valores del array led_values
 
 	//Cambio el duty cicle actualizando los match
 	*pwm1mr1 = led_values[0];
@@ -204,9 +215,9 @@ void actualizar_PWM(){
 }
 
 void rgb_to_led(int rojo, int verde, int azul){
-	int rojo_led;
-	int verde_led;
-	int azul_led;
+	int rojo_led = 0;
+	int verde_led = 0;
+	int azul_led = 0;
 	//Interpolacion
 	///Falta hacer
 
@@ -243,8 +254,8 @@ char classify(){
 	float MinDiff = 1000.0;
 	for (i_color = 0; i_color < 6; i_color ++) {
 	  // compute Euclidean distances
-	  float ED = sqrt(pow((colores[0][i_color] - rgb_value[0]),2.0) +
-	  pow((colores[1][i_color] - rgb_values[1]),2.0) + pow((colores[2][i_color] - rgb_values[2]),2.0));
+	  float ED = sqrt(pow((color_values[0][i_color] - rgb_values[0]),2.0) +
+	  pow((color_values[1][i_color] - rgb_values[1]),2.0) + pow((color_values[2][i_color] - rgb_values[2]),2.0));
 	  MaxDiff = ED;
 	  // find minimum distance
 	  if (MaxDiff < MinDiff) {
@@ -252,7 +263,7 @@ char classify(){
 		ClosestColor = i_color;
 	  }
 	}
-	return colores[ClosestColor];
+	return color_names[ClosestColor];
 }
 
 //Rutinas de interrupcion
@@ -304,9 +315,10 @@ void TIMER0_IRQHandler(){
 		}
 
 		//decidir color
-//		char colorDetectado = classify();
+		char colorDetectado = classify();
 		if (color_leyendo == 0 && !primeraVez){		//envio solo cuando tengo los 3 valores listos
 			enviar(colorDetectado);
+			actualizar_PWM();
 		}
 
 			//Reinicio las variables
