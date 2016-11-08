@@ -53,7 +53,7 @@ void loop() {
                           break;
                       case 3:
                           Serial.print("Color=");
-                          Serial.print(dato);
+                          Serial.print((char)dato);
                           Serial.println(" ");
                           
 

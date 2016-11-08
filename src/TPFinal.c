@@ -254,8 +254,8 @@ void enviar(char colorDetectado){
 		while((*u0lsr & (1<<5))==0){} //Espero a que el buffer este vacio
 		*u0thr = (azul & 0xFF);
 //		envio la letra correspondiente al color identificado
-//		while((*u0lsr & (1<<5))==0){} //Espero a que el buffer este vacio
-//		*u0thr = (colorDetectado && 0xFF);
+		while((*u0lsr & (1<<5))==0){} //Espero a que el buffer este vacio
+		*u0thr = (colorDetectado & 0xFF);
 
 		//actualizar_PWM();
 }
@@ -265,7 +265,7 @@ char classify(){
 	int ClosestColor = 0;
 	float MaxDiff;
 	float MinDiff = 1000.0;
-	for (i_color = 0; i_color < 6; i_color ++) {
+	for (i_color = 0; i_color < CANTIDAD_COLORES; i_color ++) {
 	  // compute Euclidean distances
 	  float ED = sqrt(pow((color_values[0][i_color] - rgb_values[0]),2.0) +
 	  pow((color_values[1][i_color] - rgb_values[1]),2.0) + pow((color_values[2][i_color] - rgb_values[2]),2.0));
