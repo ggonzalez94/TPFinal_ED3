@@ -66,6 +66,8 @@ unsigned int volatile *const u0lcr = (unsigned int *) 0x4000C00C;
 unsigned int volatile *const u0lsr = (unsigned int *) 0x4000C014;
 unsigned int volatile *const u0thr = (unsigned int *) 0x4000C000;
 unsigned int volatile *const pinsel0 = (unsigned int *) 0x4002C000;
+unsigned int volatile *const u0rbr = (unsigned int *) 0x4000C000;
+unsigned int volatile *const u0ier = (unsigned int *) 0x4000C004;
 
 //PWM Registers
 unsigned int volatile *const pwm1tcr = (unsigned int *) 0x40018004;
@@ -95,6 +97,8 @@ int flag = 255; //flag de inicio  de transmision
 int flagFin = 0;
 int primeraVez = 1;
 
+int charRecibido;
+
 
 void config_pines();
 void config_timer0();
@@ -108,15 +112,19 @@ void actualizar_PWM();
 void enviar(char colorDetectado);
 char classify();
 int map(int x,int in_min,int in_max, int out_min, int out_max);
+void comenzarLectura();
+void terminarLectura();
 
 int main(void) {
 
 	config_pines();
 	*fio0clr |= (1<<S1);
 	*fio0set |= (1<<S0);
-	config_puerto_serie();
 	config_timer0();
+	config_puerto_serie();
 	//config_PWM();
+
+	terminarLectura();
 
     while(1) {
 
@@ -134,13 +142,9 @@ void config_timer0(){
 
 	//Captura
 	*t0ccr |= (1<<0); //Captura en rising edge del pin 1.26
-	*t0ccr &= ~(1<<2); //desactivo las interrupciones de captura
-	*t0mcr &= ~(1<<0); //desactiva interrupciones por Match
 	*pinsel3 |= (1<<20) | (1<<21);
 
 	//Interrupciones
-	*t0mcr |= (1<<0); //Toggle a la interrupcion por match
-	*t0ccr |= (1<<2); //Toggle a la interrupcion por captura
 	*iser0 |= (1<<1); //Habilito interrupciones por TMR0
 	*t0tcr |= (1<<0); //Empiezo a contar
 
@@ -158,6 +162,10 @@ void config_puerto_serie(){
 	*u0lcr &= ~(1<<7); //Deshabilito acceso a bits divisor
 	*pinsel0 |= (1<<4); //Confiuro pin 0.2
 	*u0lcr &= ~(1<<2 | 1<<3); //1 bit de stop y sin paridad
+
+	*pinsel0 |= (1<<6);	//Configuro recepcion por UART0 Rx
+	*u0ier |= (1<<1);	//habilito interrupciones por UART0
+	*iser0 |= (1<<5);	//habilito interrupciones en nvic
 
 	return;
 }
@@ -233,11 +241,9 @@ void rgb_to_led(int rojo, int verde, int azul){
 }
 
 void enviar(char colorDetectado){
-		int rojo = rgb_values[0]+1;
-		int verde = rgb_values[1]+1;
-		int azul = rgb_values[2]+1;
-//		while((*u0lsr & (1<<5))==0){} //Espero a que el buffer este vacio
-//		*u0thr = (flag);
+		int rojo = rgb_values[0];
+		int verde = rgb_values[1];
+		int azul = rgb_values[2];
 
 		while((*u0lsr & (1<<5))==0){} //Espero a que el buffer este vacio
 		*u0thr = (rojo & 0xFF);
@@ -249,8 +255,6 @@ void enviar(char colorDetectado){
 //		while((*u0lsr & (1<<5))==0){} //Espero a que el buffer este vacio
 //		*u0thr = (colorDetectado && 0xFF);
 
-//		while((*u0lsr & (1<<5))==0){} //Espero a que el buffer este vacio
-//		*u0thr = (flagFin);
 		//actualizar_PWM();
 }
 
@@ -274,16 +278,28 @@ char classify(){
 }
 
 int map(int x,int in_min,int in_max, int out_min, int out_max){
-	if (x<=in_max){
-		x = out_max;
-	}
-	else if(x>=in_min){
-		x = out_min;
-	}
-	else{
-		x = (x-in_min)*(out_max-out_min)/(in_max - in_min) + out_min;
-	}
-	return x;
+	if (x<=in_max)
+		return out_max;
+
+	else if(x>=in_min)
+		return out_min;
+
+	else
+		return (x-in_min)*(out_max-out_min)/(in_max - in_min) + out_min;
+}
+
+void comenzarLectura(){
+	*t0tcr = (1<<1); //Reseteo y deshabilito el timer
+	*t0mcr |= (1<<0); //Enciendo interrupciones por match
+	*t0ccr |= (1<<2); //Enciendo interrupciones por captura
+	*t0tcr = (1<<0); //Habilito nuevamente el Timer
+}
+
+void terminarLectura(){
+	*t0tcr = (1<<1); //Reseteo y deshabilito el timer
+	*t0mcr &= ~(1<<0); //Apago interrupciones por match
+	*t0ccr &= ~(1<<2); //Apago interrupciones por captura
+	*t0tcr = (1<<0); //Habilito nuevamente el Timer
 }
 
 //Rutinas de interrupcion
@@ -353,3 +369,13 @@ void EINT3_IRQHandler(){
 	return;
 }
 
+void UART0_IRQHandler(){
+	charRecibido = *u0rbr;
+
+	if(charRecibido == 'i')		//comienzo a leer el sensor
+		comenzarLectura();
+
+	if(charRecibido == 'f')		//dejo de leer el sensor
+		terminarLectura();
+	return;
+}
