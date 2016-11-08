@@ -253,7 +253,8 @@ void enviar(char colorDetectado){
 		*u0thr = (verde & 0xFF);
 		while((*u0lsr & (1<<5))==0){} //Espero a que el buffer este vacio
 		*u0thr = (azul & 0xFF);
-//		envio la letra correspondiente al color identificado
+
+		//envio la letra correspondiente al color identificado
 		while((*u0lsr & (1<<5))==0){} //Espero a que el buffer este vacio
 		*u0thr = (colorDetectado & 0xFF);
 
