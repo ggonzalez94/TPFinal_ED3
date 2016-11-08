@@ -83,18 +83,20 @@ unsigned int volatile *const pwm1ler = (unsigned int *) 0x40018050;
 int volatile transmitir = 0;
 int volatile color_leyendo = 0; //Para saber que color debo leer
 //0=rojo;1=verde;2=azul
-
+//Arreglo con los valores RGB para cada color(primera fila componente R,segunda G,tercera B)
+int color_values[3][CANTIDAD_COLORES] = {
+										 {241,228,67,255,255,195,255,0,255},
+										 {47,241,141,241,159,250,255,0,130},
+										 {52,170,197,168,202,239,249,0,76}
+										};
 int rgb_values[3] = {11,22,33}; // Valores en escala RGB
 int led_values[3] = {0,0,0}; //Valores para pasarle a los Match del PWM
-int color_values[3][CANTIDAD_COLORES]; //Arreglo con los valores RGB para cada color
-char color_names[CANTIDAD_COLORES]; //Arreglo con el nombre de cada color
+//rojo,verde,azul,amarillo,rosa,celeste,blanco,negro,naranja
+char color_names[CANTIDAD_COLORES] = {'r','g','b','y','p','c','w','k','o'}; //Arreglo con el nombre de cada color
 int volatile vuelta_captura = 0; //para saber cuantas veces hice captura
 int volatile tiempo1;
 int volatile tiempo2; //variables para guardar valores del captura
 int volatile suma_captura = 0;
-int volatile frecuencia_promedio = 0;
-int flag = 255; //flag de inicio  de transmision
-int flagFin = 0;
 int primeraVez = 1;
 
 int charRecibido;
@@ -123,8 +125,8 @@ int main(void) {
 	config_timer0();
 	config_puerto_serie();
 	//config_PWM();
-
 	terminarLectura();
+
 
     while(1) {
 
@@ -340,9 +342,10 @@ void TIMER0_IRQHandler(){
 				break;
 		}
 
-		//decidir color
-		char colorDetectado = classify();
-		if (color_leyendo == 0 && !primeraVez){		//envio solo cuando tengo los 3 valores listos
+
+		if (color_leyendo == 0 && !primeraVez){ //envio solo cuando tengo los 3 valores listos
+			//decidir color
+			char colorDetectado = classify();
 			enviar(colorDetectado);
 			//actualizar_PWM();
 		}

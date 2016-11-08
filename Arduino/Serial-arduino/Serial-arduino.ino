@@ -49,11 +49,16 @@ void loop() {
                       case 2:
                           Serial.print("B=");
                           Serial.print(dato);
-                          Serial.println(" ");
+                          Serial.print(" ");
                           break;
+                      case 3:
+                          Serial.print("Color=");
+                          Serial.print(dato);
+                          Serial.println(" ");
+                          
 
                 }
-                i = (i+1)%3;
+                i = (i+1)%4;
                 
            }
   }
