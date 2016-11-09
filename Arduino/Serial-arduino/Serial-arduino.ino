@@ -72,7 +72,7 @@ void loop() {
                           Serial.print(" ");
                           break;
                       case 3:
-                          Serial.print("Color=");
+                          Serial.print("Color:);
                           char *color = hashMap.getValueOf((char) dato);
                           Serial.print(color); 
                           Serial.println(" ");
@@ -84,3 +84,4 @@ void loop() {
            }
   }
 }
+
