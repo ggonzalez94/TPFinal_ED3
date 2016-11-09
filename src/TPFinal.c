@@ -85,12 +85,20 @@ int volatile color_leyendo = 0; //Para saber que color debo leer
 //0=rojo;1=verde;2=azul
 //Arreglo con los valores RGB para cada color(primera fila componente R,segunda G,tercera B)
 int color_values[3][CANTIDAD_COLORES] = {
-										 {241,228,67,255,255,195,255,0,255},
-										 {47,241,141,241,159,250,255,0,130},
-										 {52,170,197,168,202,239,249,0,76}
+										 {241,228,40,255,255,195,255,0,255},
+										 {47,241,120,241,159,250,255,0,130},
+										 {52,170,100,168,202,239,249,0,76}
 										};
+
+//										 {241,200,67,255,255,195,255,0,255},
+//										 {47,200,141,241,159,250,255,0,130},
+//										 {52,120,197,168,202,239,249,0,76}
+int led_values[3][CANTIDAD_COLORES] = {
+										{50000,	0,		0,		50000,	50000,	0,		50000,	0,	50000},
+										{0,		50000,	0,		10000,	0,		15000,	20000,	0,	1000},
+										{0,		0,		50000,	0,		8000,	10000,	20000,	0,	0}
+									  };
 int rgb_values[3] = {11,22,33}; // Valores en escala RGB
-int led_values[3] = {0,0,0}; //Valores para pasarle a los Match del PWM
 //rojo,verde,azul,amarillo,rosa,celeste,blanco,negro,naranja
 char color_names[CANTIDAD_COLORES] = {'r','g','b','y','p','c','w','k','o'}; //Arreglo con el nombre de cada color
 int volatile vuelta_captura = 0; //para saber cuantas veces hice captura
@@ -109,10 +117,9 @@ void config_PWM();
 void leer_rojo();
 void leer_verde();
 void leer_azul();
-void rgb_to_led(int rojo, int verde, int azul);
-void actualizar_PWM();
-void enviar(char colorDetectado);
-char classify();
+void actualizar_PWM(int colorDetectado);
+void enviar(int colorDetectado);
+int classify();
 int map(int x,int in_min,int in_max, int out_min, int out_max);
 void comenzarLectura();
 void terminarLectura();
@@ -124,7 +131,7 @@ int main(void) {
 	*fio0set |= (1<<S0);
 	config_timer0();
 	config_puerto_serie();
-	//config_PWM();
+	config_PWM();
 	comenzarLectura();
 
 
@@ -192,7 +199,7 @@ void config_PWM(){
 	*pwm1mr0 |= 25000000/500; //Periodo del pulso(igual supuestamente al de Arduino https://learn.adafruit.com/adafruit-arduino-lesson-3-rgb-leds/theory-pwm)
 	*pwm1mcr |= (1<<1); //Reseteo en Match0
 	*pwm1ler |= (1<<0); //Hago efectivo el valor del Match
-	*pwm1tcr |= (1<<3); //Configuro el modulo como PWM
+	*pwm1tcr |= (1<<0) | (1<<3); //Configuro el modulo como PWM
 
 	//Habilito las salidas 1,2 y 3
 	*pwm1pcr |= (1<<9) | (1<<10) | (1<<11);
@@ -216,33 +223,21 @@ void leer_azul(){
 	return;
 }
 
-void actualizar_PWM(){
-	rgb_to_led(rgb_values[0],rgb_values[1],rgb_values[2]); //Actualizo los valores del array led_values
+void actualizar_PWM(int colorDetectado){
+
 
 	//Cambio el duty cicle actualizando los match
-	*pwm1mr1 = led_values[0];
-	*pwm1mr2 = led_values[1];
-	*pwm1mr3 = led_values[2];
+	*pwm1mr1 = led_values[0][colorDetectado];
+	*pwm1mr2 = led_values[1][colorDetectado];
+	*pwm1mr3 = led_values[2][colorDetectado];
 
 	//Hago que el cambio sea efectivo
 	*pwm1ler |= (1<<1) | (1<<2) | (1<<3);
 	return;
 }
 
-void rgb_to_led(int rojo, int verde, int azul){
-	int rojo_led = 0;
-	int verde_led = 0;
-	int azul_led = 0;
-	//Interpolacion
-	///Falta hacer
 
-	led_values[0] = rojo_led;
-	led_values[1] = verde_led;
-	led_values[2] = azul_led;
-	return;
-}
-
-void enviar(char colorDetectado){
+void enviar(int colorDetectado){
 		int rojo = rgb_values[0];
 		int verde = rgb_values[1];
 		int azul = rgb_values[2];
@@ -255,12 +250,13 @@ void enviar(char colorDetectado){
 		*u0thr = (azul & 0xFF);
 //		envio la letra correspondiente al color identificado
 		while((*u0lsr & (1<<5))==0){} //Espero a que el buffer este vacio
-		*u0thr = (colorDetectado & 0xFF);
+		*u0thr = ((color_names[colorDetectado]) & 0xFF);
 
 		//actualizar_PWM();
 }
 
-char classify(){
+//Devuelve el indice
+int classify(){
 	int i_color;
 	int ClosestColor = 0;
 	float MaxDiff;
@@ -276,7 +272,7 @@ char classify(){
 		ClosestColor = i_color;
 	  }
 	}
-	return color_names[ClosestColor];
+	return ClosestColor;
 }
 
 int map(int x,int in_min,int in_max, int out_min, int out_max){
@@ -345,9 +341,9 @@ void TIMER0_IRQHandler(){
 
 		if (color_leyendo == 0 && !primeraVez){ //envio solo cuando tengo los 3 valores listos
 			//decidir color
-			char colorDetectado = classify();
+			int colorDetectado = classify();
 			enviar(colorDetectado);
-			//actualizar_PWM();
+			actualizar_PWM(colorDetectado);
 		}
 
 		//Reinicio las variables
@@ -363,14 +359,6 @@ void TIMER0_IRQHandler(){
 	return;
 }
 
-void EINT3_IRQHandler(){
-//	*io0intclr |= (1<<PUL_EXT); //Bajo la bandera
-//	*t0tcr = (1<<1); //Reseteo y deshabilito el timer
-//	*t0mcr ^= (1<<0); //Toggle a la interrupcion por match
-//	*t0ccr ^= (1<<2); //Toggle a la interrupcion por captura
-//	*t0tcr = (1<<0); //Habilito nuevamente el Timer
-	return;
-}
 
 void UART0_IRQHandler(){
 	charRecibido = *u0rbr;
