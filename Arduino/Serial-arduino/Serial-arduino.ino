@@ -52,8 +52,8 @@ void loop() {
                           Serial.print(" ");
                           break;
                       case 3:
-                          Serial.print("Color=");
-                          Serial.print((char)dato);
+                          Serial.print("Color: ");
+                          colorMap(dato);
                           Serial.println(" ");
                           
 
@@ -63,3 +63,39 @@ void loop() {
            }
   }
 }
+
+void colorMap(char key){
+  switch (key){
+    case 'r':
+        Serial.print("Rojo");
+        break;
+    case 'g':
+        Serial.print("Verde");
+        break;
+    case 'b':
+        Serial.print("Azul");
+        break;
+    case 'k':
+        Serial.print("Negro");
+        break;
+    case 'w':
+        Serial.print("Blanco");
+        break;
+    case 'o':
+        Serial.print("Naranja");
+        break;
+    case 'p':
+        Serial.print("Rosa");
+        break;
+    case 'y':
+        Serial.print("Amarillo");
+        break;
+    case 'c':
+        Serial.print("Celeste");
+        break;
+    default:
+        Serial.print("No se");
+        break;
+  }
+}
+
