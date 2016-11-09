@@ -85,18 +85,18 @@ int volatile color_leyendo = 0; //Para saber que color debo leer
 //0=rojo;1=verde;2=azul
 //Arreglo con los valores RGB para cada color(primera fila componente R,segunda G,tercera B)
 int color_values[3][CANTIDAD_COLORES] = {
-										 {241,228,40,255,255,195,255,0,255},
-										 {47,241,120,241,159,250,255,0,130},
-										 {52,170,100,168,202,239,249,0,76}
+										 {241,200,40,255,255,195,255,0,255},
+										 {47,200,120,241,120,250,255,0,130},
+										 {52,150,100,168,160,239,249,0,76}
 										};
 
-//										 {241,200,67,255,255,195,255,0,255},
-//										 {47,200,141,241,159,250,255,0,130},
-//										 {52,120,197,168,202,239,249,0,76}
+//										 {241,228,40,255,255,195,255,0,255},
+//										 {47,241,120,241,159,250,255,0,130},
+//										 {52,170,100,168,202,239,249,0,76}
 int led_values[3][CANTIDAD_COLORES] = {
-										{50000,	0,		0,		50000,	50000,	0,		50000,	0,	50000},
-										{0,		50000,	0,		10000,	0,		15000,	20000,	0,	1000},
-										{0,		0,		50000,	0,		8000,	10000,	20000,	0,	0}
+										{50000,	0,		0,		40000,	50000,	0,		50000,	0,	50000},
+										{0,		50000,	0,		5000,	0,		10000,	10000,	0,	1000},
+										{0,		0,		50000,	0,		8000,	20000,	10000,	0,	0}
 									  };
 int rgb_values[3] = {11,22,33}; // Valores en escala RGB
 //rojo,verde,azul,amarillo,rosa,celeste,blanco,negro,naranja
@@ -132,8 +132,8 @@ int main(void) {
 	config_timer0();
 	config_puerto_serie();
 	config_PWM();
-	comenzarLectura();
-
+//	comenzarLectura();
+	terminarLectura();
 
     while(1) {
 
@@ -297,6 +297,7 @@ void terminarLectura(){
 	*t0tcr = (1<<1); //Reseteo y deshabilito el timer
 	*t0mcr &= ~(1<<0); //Apago interrupciones por match
 	*t0ccr &= ~(1<<2); //Apago interrupciones por captura
+	actualizar_PWM(7);	//apago los leds cuando no estoy leyendo
 	*t0tcr = (1<<0); //Habilito nuevamente el Timer
 }
 

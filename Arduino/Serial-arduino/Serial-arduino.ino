@@ -40,6 +40,7 @@ void setup() {
         Serial.println("Bienvenido al identificador de color!");
         Serial.println("Para iniciar la lectura, ingrese 'i'");
         Serial.println("Para finalizar la lectura, ingrese 'f'");
+        Serial.println("Se mostraran las componentes R, G y B, y el nombre del color medido");
 }
 
 void loop() {
@@ -76,7 +77,7 @@ void loop() {
                           Serial.print(" ");
                           break;
                       case 3:
-                          Serial.print("Color:);
+                          Serial.print("Color: ");
                           char *color = hashMap.getValueOf((char) dato);
                           Serial.print(color); 
                           Serial.println(" ");
