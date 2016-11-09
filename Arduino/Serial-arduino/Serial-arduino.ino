@@ -36,6 +36,10 @@ void setup() {
         hashMap[7]('k',"Negro");
         hashMap[8]('o',"Naranja");
         i=0;
+
+        Serial.println("Bienvenido al identificador de color!");
+        Serial.println("Para iniciar la lectura, ingrese 'i'");
+        Serial.println("Para finalizar la lectura, ingrese 'f'");
 }
 
 void loop() {
