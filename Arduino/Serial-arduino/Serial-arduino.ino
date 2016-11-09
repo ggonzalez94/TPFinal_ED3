@@ -1,3 +1,12 @@
+#include <HashMap.h>
+
+
+//define the max size of the hashtable
+const byte HASH_SIZE = 9;
+//storage
+HashType<char,char*> hashRawArray[HASH_SIZE];
+//handles the storage [search,retrieve,insert]
+HashMap<char,char*> hashMap = HashMap<char,char*>( hashRawArray , HASH_SIZE );
 #include <SoftwareSerial.h>
 
 SoftwareSerial mySerial(10,11);
@@ -15,6 +24,17 @@ void setup() {
         letra[0] = 'R';
         letra[1] = 'G';
         letra[2] = 'B';
+        
+        //Inicializacion del HashMap
+        hashMap[0]('r',"Rojo");
+        hashMap[1]('g',"Verde");
+        hashMap[2]('b',"Azul");
+        hashMap[3]('y',"Amarillo");
+        hashMap[4]('p',"Rosado");
+        hashMap[5]('c',"Celeste");
+        hashMap[6]('w',"Blanco");
+        hashMap[7]('k',"Negro");
+        hashMap[8]('o',"Naranja");
         i=0;
 }
 
@@ -53,7 +73,8 @@ void loop() {
                           break;
                       case 3:
                           Serial.print("Color=");
-                          Serial.print((char)dato);
+                          char *color = hashMap.getValueOf((char) dato);
+                          Serial.print(color); 
                           Serial.println(" ");
                           
 
