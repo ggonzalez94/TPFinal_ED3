@@ -1,10 +1,8 @@
 /*
 ===============================================================================
  Name        : TPFinal.c
- Author      : $(author)
- Version     :
- Copyright   : $(copyright)
- Description : main definition
+ Author      : Gustavo Gonzalez, Facundo Maero
+ Version     : 1.0
 ===============================================================================
 */
 
@@ -15,8 +13,7 @@
 
 #include <cr_section_macros.h>
 
-
-// TODO: insert other definitions and declarations here
+//Defino constantes a utilizar en el programa
 #define S0 4
 #define S1 5
 #define S2 10
@@ -27,6 +24,7 @@
 #define CANTIDAD_COLORES 9
 
 //Constantes de calibracion
+//Valores maximos y minimos de cada sensor usados para calibrar la salida
 #define R_MAX 71
 #define R_MIN 169
 #define G_MAX 60
@@ -80,36 +78,38 @@ unsigned int volatile *const pwm1pcr = (unsigned int *) 0x4001804C;
 unsigned int volatile *const pwm1ler = (unsigned int *) 0x40018050;
 
 //otros punteros y variables globales
+
 int volatile transmitir = 0;
 int volatile color_leyendo = 0; //Para saber que color debo leer
-//0=rojo;1=verde;2=azul
-//Arreglo con los valores RGB para cada color(primera fila componente R,segunda G,tercera B)
-int color_values[3][CANTIDAD_COLORES] = {
-										 {241,200,40,255,255,195,255,0,255},
-										 {47,200,120,241,120,250,255,0,130},
-										 {52,150,100,168,160,239,249,0,76}
-										};
+								//0=rojo;1=verde;2=azul
 
-//										 {241,228,40,255,255,195,255,0,255},
-//										 {47,241,120,241,159,250,255,0,130},
-//										 {52,170,100,168,202,239,249,0,76}
+//Arreglo con los valores RGB para cada color(primera fila componente R,segunda G,tercera B)
+//Estos valores surgen de la calibracion previa del sensor, con los valores tipicos de cada color medido
+int color_values[3][CANTIDAD_COLORES] = {
+										 {241,	200,	40,		255,	255,	195,	255,	0,	255},
+										 {47,	200,	120,	241,	120,	250,	255,	0,	130},
+										 {52,	150,	100,	168,	160,	239,	249,	0,	76}
+										};
+//Valores a utilizar en los registros MATCH del modulo PWM para lograr la reproduccion de los colores en el LED RGB
 int led_values[3][CANTIDAD_COLORES] = {
 										{50000,	0,		0,		40000,	50000,	0,		50000,	0,	50000},
 										{0,		50000,	0,		5000,	0,		10000,	10000,	0,	1000},
 										{0,		0,		50000,	0,		8000,	20000,	10000,	0,	0}
 									  };
-int rgb_values[3] = {11,22,33}; // Valores en escala RGB
-//rojo,verde,azul,amarillo,rosa,celeste,blanco,negro,naranja
+int rgb_values[3] = {1,1,1}; // Valores en escala RGB
+
+//Los colores a detectar son: rojo, verde, azul, amarillo, rosa, celeste, blanco, negro, naranja
 char color_names[CANTIDAD_COLORES] = {'r','g','b','y','p','c','w','k','o'}; //Arreglo con el nombre de cada color
+
 int volatile vuelta_captura = 0; //para saber cuantas veces hice captura
+//variables para guardar valores del captura
 int volatile tiempo1;
-int volatile tiempo2; //variables para guardar valores del captura
+int volatile tiempo2;
 int volatile suma_captura = 0;
 int primeraVez = 1;
-
 int charRecibido;
 
-
+//Prototipos de funciones
 void config_pines();
 void config_timer0();
 void config_puerto_serie();
@@ -135,16 +135,14 @@ int main(void) {
 //	comenzarLectura();
 	terminarLectura();
 
-    while(1) {
-
-    }
+    while(1) {}
     return 0 ;
 }
 
 void config_timer0(){
 	*t0ctcr = 0; //Timer 0 como timer y no contador(ya viene asi por defecto)
 
-	//Match
+	//Match 0
 	*t0mr0 = 25000000 *TIME; //Interrumpir cada TIME segundo
 	*t0pr = 0;  //Preescaler register en 0
 	*t0mcr |= (1<<1);  //Configuramos para que resetee el TC
@@ -181,7 +179,7 @@ void config_puerto_serie(){
 
 
 void config_pines(){
-	*fio0dir |= (1<<S0) | (1<<S1) | (1<<S2) | (1<<S3); //Pines de config del sensor como salida
+	*fio0dir |= (1<<S0) | (1<<S1) | (1<<S2) | (1<<S3); //Pines de configuracion del sensor como salida
 	*fio0dir &= ~(1<<PUL_EXT); //Pin 0.PUL_EXT como entrada para el pulsador
 	*io0intenr |= (1<<PUL_EXT); //Habilito interrupciones por flanco de subida
 	*iser0 |= (1<<21); //Habilito interrupciones externas
@@ -196,7 +194,7 @@ void config_PWM(){
 	*pinsel3 |= (1<<5);
 	*pinsel3 |= (1<<9);
 	*pinsel3 |= (1<<11);
-	*pwm1mr0 |= 25000000/500; //Periodo del pulso(igual supuestamente al de Arduino https://learn.adafruit.com/adafruit-arduino-lesson-3-rgb-leds/theory-pwm)
+	*pwm1mr0 |= 25000000/500; //Periodo del pulso (igual al de Arduino)
 	*pwm1mcr |= (1<<1); //Reseteo en Match0
 	*pwm1ler |= (1<<0); //Hago efectivo el valor del Match
 	*pwm1tcr |= (1<<0) | (1<<3); //Configuro el modulo como PWM
@@ -207,24 +205,28 @@ void config_PWM(){
 	return;
 }
 
+//Setea los pines de configuracion del sensor para leer la componente Rojo
 void leer_rojo(){
 	*fio0clr |= (1<<S2) | (1<<S3);
 	return;
 }
 
+//Setea los pines de configuracion del sensor para leer la componente Verde
 void leer_verde(){
 	*fio0set |= (1<<S2) | (1<<S3);
 	return;
 }
 
+//Setea los pines de configuracion del sensor para leer la componente Azul
 void leer_azul(){
 	*fio0clr |= (1<<S2);
 	*fio0set |= (1<<S3);
 	return;
 }
 
+//Actualiza el valor de los registros Match del modulo PWM en funcion del color detectado
+//Enciende en el LED el color detectado
 void actualizar_PWM(int colorDetectado){
-
 
 	//Cambio el duty cicle actualizando los match
 	*pwm1mr1 = led_values[0][colorDetectado];
@@ -236,7 +238,7 @@ void actualizar_PWM(int colorDetectado){
 	return;
 }
 
-
+//Envia al Arduino la informacion recogida por el sensor
 void enviar(int colorDetectado){
 		int rojo = rgb_values[0];
 		int verde = rgb_values[1];
@@ -248,33 +250,36 @@ void enviar(int colorDetectado){
 		*u0thr = (verde & 0xFF);
 		while((*u0lsr & (1<<5))==0){} //Espero a que el buffer este vacio
 		*u0thr = (azul & 0xFF);
+
 //		envio la letra correspondiente al color identificado
 		while((*u0lsr & (1<<5))==0){} //Espero a que el buffer este vacio
 		*u0thr = ((color_names[colorDetectado]) & 0xFF);
-
-		//actualizar_PWM();
 }
 
-//Devuelve el indice
+//Algoritmo de distancia minima
+//Compara los valores medidos de las 3 componentes con la matriz de calibracion
+//Decide en funcion de la menor distancia de los 3 valores con algun color de la matriz
 int classify(){
 	int i_color;
 	int ClosestColor = 0;
 	float MaxDiff;
 	float MinDiff = 1000.0;
 	for (i_color = 0; i_color < CANTIDAD_COLORES; i_color ++) {
-	  // compute Euclidean distances
+	  // Calcula la distancia
 	  float ED = sqrt(pow((color_values[0][i_color] - rgb_values[0]),2.0) +
 	  pow((color_values[1][i_color] - rgb_values[1]),2.0) + pow((color_values[2][i_color] - rgb_values[2]),2.0));
 	  MaxDiff = ED;
-	  // find minimum distance
+	  // Encuentra la distancia menor
 	  if (MaxDiff < MinDiff) {
 		MinDiff = MaxDiff;
 		ClosestColor = i_color;
 	  }
 	}
+	//Devuelvo el indice (0 - 8) del color detectado
 	return ClosestColor;
 }
 
+//Convierte el valor en Periodo, medido en el sensor, por los valores RGB 0 - 255
 int map(int x,int in_min,int in_max, int out_min, int out_max){
 	if (x<=in_max)
 		return out_max;
@@ -286,6 +291,7 @@ int map(int x,int in_min,int in_max, int out_min, int out_max){
 		return (x-in_min)*(out_max-out_min)/(in_max - in_min) + out_min;
 }
 
+//Configura las interrupciones para comenzar a leer valores del sensor
 void comenzarLectura(){
 	*t0tcr = (1<<1); //Reseteo y deshabilito el timer
 	*t0mcr |= (1<<0); //Enciendo interrupciones por match
@@ -293,6 +299,7 @@ void comenzarLectura(){
 	*t0tcr = (1<<0); //Habilito nuevamente el Timer
 }
 
+//Desactiva las interrupciones de timer y captura, y apaga el LED
 void terminarLectura(){
 	*t0tcr = (1<<1); //Reseteo y deshabilito el timer
 	*t0mcr &= ~(1<<0); //Apago interrupciones por match
@@ -304,10 +311,9 @@ void terminarLectura(){
 //Rutinas de interrupcion
 
 void TIMER0_IRQHandler(){
-	//Interrupcion por Match
-	//Cada TIME segundos cambio de color a leer y mando por puerto serie el resultado
 
-	if(*t0ir & (1<<4)){ //Interrupcion por captura
+	//Si la interrupcion fue por captura calculo la diferencia con el valor anterior y la guardo en suma_captura
+	if(*t0ir & (1<<4)){
 		*t0ir |= (1<<4); //Bajo la bandera
 		if(vuelta_captura==0){
 			tiempo1 = *t0cr0;
@@ -321,7 +327,11 @@ void TIMER0_IRQHandler(){
 		return;
 	}
 
-	if (*t0ir & (1<<0)){ //Interrupcion por Match
+	//Interrupcion por Match
+	//Mido primero R, luego G y por ultimo B
+	//Guardo los valores en un vector de resultados
+	//Al tener los 3 valores y la decision del color leido, envio los 4 datos por puerto serie al Arduino
+	if (*t0ir & (1<<0)){
 		*t0ir |= (1<<0); //Bajo la bandera
 
 		switch(color_leyendo){
@@ -351,16 +361,17 @@ void TIMER0_IRQHandler(){
 		vuelta_captura = 0;
 		suma_captura = 0;
 		color_leyendo = (color_leyendo+1)%3; //Reinicio la lectura
-		if(primeraVez && (color_leyendo == 0)){		//aca entro la primera vez que tengo los 3 colores listos para enviar
+		if(primeraVez && (color_leyendo == 0)){//aca entro la primera vez que tengo los 3 colores listos para enviar
 			primeraVez = 0;
 		}
-
 		return;
 	}
 	return;
 }
 
 
+//Si recibi algo por puerto serie, identifico el caracter
+//Con una 'i' inicio la lectura, con una 'f' la termino.
 void UART0_IRQHandler(){
 	charRecibido = *u0rbr;
 

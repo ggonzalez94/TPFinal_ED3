@@ -1,12 +1,11 @@
 #include <HashMap.h>
 
-
-//define the max size of the hashtable
+//Tamaño maximo del hashmap
 const byte HASH_SIZE = 9;
-//storage
+//Tipo de hashmap: clave: char, elemento: cadena de chars
 HashType<char,char*> hashRawArray[HASH_SIZE];
-//handles the storage [search,retrieve,insert]
 HashMap<char,char*> hashMap = HashMap<char,char*>( hashRawArray , HASH_SIZE );
+//Libreria para utilizar dos puertos seria simultaneamente
 #include <SoftwareSerial.h>
 
 SoftwareSerial mySerial(10,11);
@@ -37,6 +36,7 @@ void setup() {
         hashMap[8]('o',"Naranja");
         i=0;
 
+        //Impresion del mensaje de bienvenida
         Serial.println("Bienvenido al identificador de color!");
         Serial.println("Para iniciar la lectura, ingrese 'i'");
         Serial.println("Para finalizar la lectura, ingrese 'f'");
@@ -44,7 +44,8 @@ void setup() {
 }
 
 void loop() {
-  if(Serial.available()){   //si mande algo por teclado
+  //Si recibi algo por el puerto serie de la PC
+  if(Serial.available()){
       incomingChar = Serial.read();
       if(incomingChar == 'i'){
         Serial.println("Iniciando la lectura");\
@@ -55,38 +56,38 @@ void loop() {
         mySerial.write('f');
       }
   }
-  if(mySerial.available()){ //si la lpc mando algo
+
+  //Si recibi algo por el puerto serie de la placa LPC
+  if(mySerial.available()){
            int dato = mySerial.read();
            dato = dato;
 
-           if(true){
-                switch(i){
-                      case 0:
-                          Serial.print("R=");
-                          Serial.print(dato);
-                          Serial.print(" ");
-                          break;
-                      case 1:
-                          Serial.print("G=");
-                          Serial.print(dato);
-                          Serial.print(" ");
-                          break;
-                      case 2:
-                          Serial.print("B=");
-                          Serial.print(dato);
-                          Serial.print(" ");
-                          break;
-                      case 3:
-                          Serial.print("Color: ");
-                          char *color = hashMap.getValueOf((char) dato);
-                          Serial.print(color); 
-                          Serial.println(" ");
-                          
-
-                }
-                i = (i+1)%4;
-                
+           //Imprimo los datos en el orden que los recibo
+           //Valor Rojo, Verde, Azul, Caracter de color detectado
+           //Y mapeo el caracter al nombre del color
+           switch(i){
+                case 0:
+                    Serial.print("R=");
+                    Serial.print(dato);
+                    Serial.print(" ");
+                    break;
+                case 1:
+                    Serial.print("G=");
+                    Serial.print(dato);
+                    Serial.print(" ");
+                    break;
+                case 2:
+                    Serial.print("B=");
+                    Serial.print(dato);
+                    Serial.print(" ");
+                    break;
+                case 3:
+                    Serial.print("Color: ");
+                    char *color = hashMap.getValueOf((char) dato);
+                    Serial.print(color); 
+                    Serial.println(" ");
            }
-  }
+           i = (i+1)%4;
+    }
 }
 
